@@ -4,6 +4,7 @@
   "description": "breath pacer animation for the Emotion & Cognition Lab's PVS project",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -15,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Floozutter/pvs-breath-pacer/issues"
   },
-  "homepage": "https://github.com/Floozutter/pvs-breath-pacer#readme"
+  "homepage": "https://github.com/Floozutter/pvs-breath-pacer#readme",
+  "devDependencies": {
+    "typescript": "^4.5.3"
+  }
 }
