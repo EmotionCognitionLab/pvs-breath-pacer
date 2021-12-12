@@ -1,0 +1,19 @@
+{
+  "name": "pvs-breath-pacer",
+  "version": "0.0.1",
+  "description": "breath pacer animation for the Emotion & Cognition Lab's PVS project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Floozutter/pvs-breath-pacer.git"
+  },
+  "author": "Floozutter <me@floozutter.site> (http://www.floozutter.site/)",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/Floozutter/pvs-breath-pacer/issues"
+  },
+  "homepage": "https://github.com/Floozutter/pvs-breath-pacer#readme"
+}
