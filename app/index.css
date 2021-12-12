@@ -1,0 +1,24 @@
+body {
+    background-color: Beige;
+}
+
+canvas {
+    background-color: MintCream;
+}
+
+#bp-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#bp-canvas {
+    display: block;
+    margin: 50px;
+}
+
+#bp-button {
+    display: block;
+    font-size: 16px;
+}

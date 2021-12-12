@@ -5,9 +5,11 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "prepare": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build-lib": "tsc",
+    "build-dist": "npx webpack",
+    "build": "npm run build-lib && npm run build-dist",
+    "prepare": "npm run build-lib",
+    "test": "echo \"error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -21,5 +23,13 @@
   "homepage": "https://github.com/Floozutter/pvs-breath-pacer#readme",
   "devDependencies": {
     "typescript": "^4.5.3"
+  },
+  "optionalDependencies": {
+    "css-loader": "^6.5.1",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.4.5",
+    "ts-loader": "^9.2.6",
+    "webpack": "^5.65.0",
+    "webpack-cli": "^4.9.1"
   }
 }
