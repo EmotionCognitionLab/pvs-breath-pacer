@@ -21,8 +21,14 @@ module.exports = {
         rules: [
             {
                 test: /\.tsx?$/i,
-                use: "ts-loader",
+                loader: "ts-loader",
                 exclude: /node_modules/,
+                options: {
+                    compilerOptions: {
+                        outDir: "dist/",
+                        declaration: false,
+                    },
+                },
             },
             {
                 test: /\.css$/i,
