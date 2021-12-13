@@ -19,7 +19,6 @@ document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
     if (!f) { return; }
     const reader = new FileReader();
     reader.onload = (e: Event) => {
-        console.log(reader.result);
         const instructions = parseInstructions(reader.result as string);
         if (instructions === null) { return; }
         bp.set({instructions});
