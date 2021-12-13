@@ -18,7 +18,12 @@ canvas {
     margin: 50px;
 }
 
-#bp-button {
+#bp-load, #bp-start {
     display: block;
+    margin: 5px;
     font-size: 16px;
+}
+
+#bp-load {
+    text-align-last: center;
 }
