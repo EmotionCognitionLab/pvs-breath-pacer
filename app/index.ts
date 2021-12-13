@@ -1,5 +1,5 @@
 import "./index.css";
-import { BreathPacer, BreathPacerInstruction, parseInstructions } from "../src/index";
+import { BreathPacer, BreathPacerInstruction, utils } from "../src/index";
 
 const DEFAULT_INSTRUCTIONS: BreathPacerInstruction[] = [
     {duration: 2000, breathe: "in"},
@@ -19,9 +19,12 @@ document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
     if (!f) { return; }
     const reader = new FileReader();
     reader.onload = (e: Event) => {
-        const instructions = parseInstructions(reader.result as string);
-        if (instructions === null) { return; }
-        bp.set({instructions});
+        try {
+            const instructions = utils.parseInstructionsCSV(reader.result as string);
+            bp.set({instructions});
+        } catch (e) {
+            console.error(e);
+        }
     };
     reader.readAsText(f);
 });
