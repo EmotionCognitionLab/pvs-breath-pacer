@@ -1,16 +1,19 @@
 export class BreathPacer {
-    cfg!: BreathPacerConfig;
+    cfg: BreathPacerConfig;
 
     static readonly defaults: BreathPacerConfig = {
     };
 
     constructor(cfg: Partial<BreathPacerConfig>) {
-        this.set(cfg);
+        this.cfg = {
+            ...BreathPacer.defaults,
+            ...cfg,
+        };
     }
 
     set(cfg: Partial<BreathPacerConfig>) {
         this.cfg = {
-            ...BreathPacer.defaults,
+            ...this.cfg,
             ...cfg,
         };
     }
