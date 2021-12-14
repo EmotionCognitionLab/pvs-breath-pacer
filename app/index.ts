@@ -2,11 +2,10 @@ import "./index.css";
 import { BreathPacer, BreathPacerInstruction, utils } from "../src/index";
 
 const DEFAULT_INSTRUCTIONS: BreathPacerInstruction[] = [
-    {duration: 2000, breathe: "in"},
-    {duration: 2000, breathe: "out"},
     {duration: 4000, breathe: "in"},
-    {duration: 2000, breathe: "hold"},
-    {duration: 5000, breathe: "out"},
+    {duration: 4000, breathe: "hold"},
+    {duration: 4000, breathe: "out"},
+    {duration: 4000, breathe: "hold"},
 ];
 
 const bp = new BreathPacer(
