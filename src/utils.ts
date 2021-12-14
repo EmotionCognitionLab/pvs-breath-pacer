@@ -5,7 +5,7 @@ export function parseInstructionsCSV(text: string): BreathPacerInstruction[] {
         if ((line.match(/,/g) ?? []).length != 1) {
             throw new Error(`line "${line}" does not contain exactly one comma`);
         }
-        const [dstring, breathe] = line.split(",");
+        const [dstring, breathe] = line.split(",").map(s => s.trim());
         const duration = parseInt(dstring, 10);
         if (Number.isNaN(duration) || duration < 0) {
             throw new Error(`failed to parse nonnegative numeric duration from "${dstring}"`);
