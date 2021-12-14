@@ -9,10 +9,10 @@ const DEFAULT_INSTRUCTIONS: BreathPacerInstruction[] = [
     {duration: 5000, breathe: "out"},
 ];
 
-const bp = new BreathPacer({
-    canvas: document.getElementById("bp-canvas"),
-    instructions: DEFAULT_INSTRUCTIONS,
-});
+const bp = new BreathPacer(
+    document.getElementById("bp-canvas") as HTMLCanvasElement,
+    DEFAULT_INSTRUCTIONS,
+);
 
 document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
     const f = (e.target as HTMLInputElement).files?.[0];
@@ -21,7 +21,7 @@ document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
     reader.onload = (e: Event) => {
         try {
             const instructions = utils.parseInstructionsCSV(reader.result as string);
-            bp.set({instructions});
+            bp.setInstructions(instructions);
         } catch (e) {
             console.error(e);
         }
