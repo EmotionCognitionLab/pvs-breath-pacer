@@ -6,6 +6,7 @@ export class BreathPacer {
 
     private running: boolean = false;
     private startTime: number | null = null;
+    private resolve: (() => void) | null = null;
 
     static readonly defaults: BreathPacerConfig = {
         delay: 1000/60,
@@ -152,6 +153,7 @@ export class BreathPacer {
             this.requestUpdate();
         } else {
             this.running = false;
+            this.resolve?.();
         }
     }
 
@@ -159,12 +161,16 @@ export class BreathPacer {
         window.requestAnimationFrame(this.update.bind(this));
     }
 
-    start() {
+    start(): Promise<void> {
         // set state to start of animation
         this.running = true;
         this.startTime = null;
         // start updating
         this.requestUpdate();
+        // return promise
+        return new Promise((resolve, _) => {
+            this.resolve = resolve;
+        });
     }
 }
 
