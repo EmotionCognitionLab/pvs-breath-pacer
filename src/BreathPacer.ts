@@ -74,6 +74,51 @@ export class BreathPacer {
         this.requestUpdate();
     }
 
+    setPaceAndDuration(msPerBreath: number, totalMs: number, holdMs: number) {
+        if (msPerBreath < 0 || totalMs < 0 || holdMs < 0) {
+            throw new Error('Negative values are not allowed when setting breathing pace and duration.');
+        }
+       
+        const fullCycleMs = msPerBreath + holdMs;
+        let fullBreaths = Math.floor(totalMs / fullCycleMs);
+        const remainingTime = totalMs % fullCycleMs;
+        if (remainingTime > 0) {
+            // if they specified something that ends in less than
+            // a full breath cycle, bump it up, per Mara
+            fullBreaths += 1;
+        }
+        const halfBreathTime = msPerBreath / 2;
+        const segmentsPerBreath = holdMs > 0 ? 3 : 2;
+        const points = [{t: 0, h: 0}];
+        for (let i:number = 0; i < fullBreaths * segmentsPerBreath; i++) {
+            const t = (() => {
+                if (holdMs === 0 || (i - 2) % 3 !== 0) return points[i].t + halfBreathTime;
+                return points[i].t + holdMs;
+            })();
+            const h = (() => {
+                if (segmentsPerBreath === 2) {
+                    if (i % 2 === 0) {
+                        return 1; // inhale
+                    }
+                    return 0; // exhale
+                }
+                if (i % 3 === 0) {
+                    return 1; // inhale
+                }
+                if ((i - 1) % 3 === 0) {
+                    return 0; // exhale
+                }
+                if ((i - 2) % 3 === 0) {
+                    return points[i].h // hold
+                }
+                throw new Error(`Unexpected value ${i} for breath count`);
+            })();
+            points.push({t, h});
+        }
+        this.points = points;
+        this.requestUpdate();
+    }
+
     setConfig(cfg: Partial<BreathPacerConfig>) {
         this.cfg = {
             ...this.cfg,
