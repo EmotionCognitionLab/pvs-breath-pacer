@@ -5,7 +5,8 @@ export class BreathPacer {
     private cfg: BreathPacerConfig;
 
     private running: boolean = false;
-    private startTime: number | null = null;
+    private t: number = 0;
+    private lastInstant: number | null = null;
     private resolve: (() => void) | null = null;
 
     static readonly defaults: BreathPacerConfig = {
@@ -82,39 +83,25 @@ export class BreathPacer {
         this.requestUpdate();
     }
 
-    private update(time: number) {
-        // bindings for constants
+    private update(instant: number) {
+        // update state if running
+        if (this.running) {
+            // t doesn't change on the first update
+            if (this.lastInstant !== null) {
+                this.t += instant - this.lastInstant;
+            }
+            this.lastInstant = instant;
+        }
+        // bindings for convenience
         const canvas = this.canvas;
+        const cfg = this.cfg;
         const ctx = this.ctx;
         const points = this.points;
-        const cfg = this.cfg;
-        // set startTime if still unset while running
-        if (this.running && this.startTime === null) {
-            this.startTime = time;
-        }
         // compute coordinates of guide
-        const guide = (() => {
-            const t = this.startTime === null ? 0 : time - this.startTime;
-            const h = (() => {
-                // find nearest points enclosing t horizontally
-                const [left, right] = (() => {
-                    for (let index = 0; index < points.length - 1; ++index) {
-                        const [left, right] = [points[index], points[index + 1]];
-                        if (left.t <= t && t <= right.t) {
-                            return [left, right];
-                        }
-                    }
-                    const last = points[points.length - 1];
-                    return [last, {...last, t: Number.POSITIVE_INFINITY}];
-                })();
-                // compute line of enclosing points
-                const m = (right.h - left.h) / (right.t - left.t);
-                const b = -m*left.t + left.h;
-                // get h(t) from line equation
-                return m*t + b;
-            })();
-            return {t: t, h: h};
-        })();
+        const guide = {
+            t: this.t,
+            h: guideHeight(points, this.t),
+        };
         // define view transformation on world {t, h} coords to canvas [x, y] coords
         const view = ({t, h}: BreathPacerPoint): [number, number] => {
             return [
@@ -152,26 +139,59 @@ export class BreathPacer {
         if (this.running && guide.t <= points[points.length - 1].t) {
             this.requestUpdate();
         } else {
-            this.running = false;
+            this.pause();
             this.resolve?.();
         }
     }
 
-    requestUpdate() {
+    private requestUpdate() {
         window.requestAnimationFrame(this.update.bind(this));
+    }
+
+    isRunning(): boolean {
+        return this.running;
+    }
+
+    resume() {
+        this.running = true;
+        this.lastInstant = null;
+        this.requestUpdate()
+    }
+
+    pause() {
+        this.running = false;
+        this.lastInstant = null;
     }
 
     start(): Promise<void> {
         // set state to start of animation
-        this.running = true;
-        this.startTime = null;
-        // start updating
-        this.requestUpdate();
+        this.t = 0;
+        // resume animation
+        this.resume();
         // return promise
         return new Promise((resolve, _) => {
             this.resolve = resolve;
         });
     }
+}
+
+function guideHeight(points: BreathPacerPoint[], t: number): number {
+    // find nearest points enclosing t horizontally
+    const [left, right] = (() => {
+        for (let index = 0; index < points.length - 1; ++index) {
+            const [left, right] = [points[index], points[index + 1]];
+            if (left.t <= t && t <= right.t) {
+                return [left, right];
+            }
+        }
+        const last = points[points.length - 1];
+        return [last, {...last, t: Number.POSITIVE_INFINITY}];
+    })();
+    // compute line of enclosing points
+    const m = (right.h - left.h) / (right.t - left.t);
+    const b = -m*left.t + left.h;
+    // get h(t) from line equation
+    return m*t + b;
 }
 
 
