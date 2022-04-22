@@ -15,10 +15,10 @@ canvas {
 
 #bp-canvas {
     display: block;
-    margin: 50px;
+    margin: 10px 50px 50px 50px;
 }
 
-#bp-load, #bp-start {
+#bp-load, #bp-start, #bp-pause, #bp-resume {
     display: block;
     margin: 5px;
     font-size: 16px;

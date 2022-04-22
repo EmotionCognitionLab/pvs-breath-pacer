@@ -31,3 +31,11 @@ document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
 document.getElementById("bp-start")!.addEventListener("click", () => {
     bp.start();
 });
+
+document.getElementById("bp-pause")!.addEventListener("click", () => {
+    bp.pause();
+});
+
+document.getElementById("bp-resume")!.addEventListener("click", () => {
+    bp.resume();
+});
