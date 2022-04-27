@@ -179,12 +179,16 @@ export class BreathPacer {
         ctx.fillStyle = cfg.guideFillStyle;
         ctx.arc(...view(guide), cfg.guideRadius, 0, 2*Math.PI);
         ctx.fill();
-        // request next frame if running and still on track
-        if (this.running && guide.t <= points[points.length - 1].t) {
-            this.requestUpdate();
-        } else {
-            this.pause();
-            this.resolve?.();
+        // if currently running, choose to either continue or stop the animation
+        if (this.running) {
+            if (guide.t <= points[points.length - 1].t) {
+                // continue animating if still on track
+                this.requestUpdate();
+            } else {
+                // stop animating and resolve promise if beyond track
+                this.pause();
+                this.resolve?.();
+            }
         }
     }
 

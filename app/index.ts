@@ -28,8 +28,9 @@ document.getElementById("bp-load")!.addEventListener("change", (e: Event) => {
     reader.readAsText(f);
 });
 
-document.getElementById("bp-start")!.addEventListener("click", () => {
-    bp.start();
+document.getElementById("bp-start")!.addEventListener("click", async () => {
+    await bp.start();
+    console.log("resolved");
 });
 
 document.getElementById("bp-pause")!.addEventListener("click", () => {
