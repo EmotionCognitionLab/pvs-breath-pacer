@@ -1,6 +1,6 @@
 {
   "name": "pvs-breath-pacer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "breath pacer animation for the Emotion & Cognition Lab's PVS project",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
