@@ -1,18 +1,33 @@
-import { BreathPacerInstruction } from "./BreathPacer";
+import { BreathPacerRegime } from "./BreathPacer";
 
-export function parseInstructionsCSV(text: string): BreathPacerInstruction[] {
-    return text.trim().split("\n").map((line: string): BreathPacerInstruction => {
-        if ((line.match(/,/g) ?? []).length != 1) {
-            throw new Error(`line "${line}" does not contain exactly one comma`);
+export function parseInstructionsCSV(text: string): BreathPacerRegime[] {
+    return text.trim().split("\n").map((line: string): BreathPacerRegime => {
+        if ((line.match(/,/g) ?? []).length != 3) {
+            throw new Error(`line "${line}" does not contain exactly three commmas`);
         }
-        const [dstring, breathe] = line.split(",").map(s => s.trim());
-        const duration = parseInt(dstring, 10);
-        if (Number.isNaN(duration) || duration < 0) {
-            throw new Error(`failed to parse nonnegative numeric duration from "${dstring}"`);
+        const [durString, bpmStr, holdPos, randStr] = line.split(",").map(s => s.trim());
+        const durationMs = parseInt(durString, 10);
+        if (Number.isNaN(durationMs) || durationMs < 0) {
+            throw new Error(`failed to parse nonnegative numeric duration from "${durString}"`);
         }
-        if (breathe !== "in" && breathe !== "out" && breathe !== "hold") {
-            throw new Error(`breathe instruction "${breathe}" must be "in", "out", or "hold"`);
+        const breathsPerMinute = parseInt(bpmStr, 10);
+        if (Number.isNaN(breathsPerMinute) || breathsPerMinute < 0) {
+            throw new Error(`failed to parse nonnegative numeric breaths per minute from "${bpmStr}"`);
         }
-        return {duration, breathe};
+
+        if (holdPos !== "postInhale" && holdPos !== "postExhale" && holdPos !== "") {
+            throw new Error(`The hold position "${holdPos}" must be "postInhale" or "postExhale" (or be left blank).`);
+        }
+
+        if (randStr !== "true" && randStr !== "false") {
+            throw new Error(`The randomize parameter ${randStr} should be either 'true' or 'false'.`);
+        }
+
+        const randomize = randStr === 'true' ? true : false;
+
+        if (holdPos !== "") {
+            return {durationMs: durationMs, breathsPerMinute: breathsPerMinute, holdPos: holdPos, randomize: randomize};
+        }
+        return {durationMs: durationMs, breathsPerMinute: breathsPerMinute, randomize: randomize};;
     });
 }

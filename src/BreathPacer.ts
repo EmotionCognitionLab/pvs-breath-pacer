@@ -8,6 +8,8 @@ export class BreathPacer {
     private t: number = 0;
     private lastInstant: number | null = null;
     private resolve: (() => void) | null = null;
+    private regimeBoundaries: {boundary:number, regime:BreathPacerRegime}[] = [];
+    private subscribers: { (regime: BreathPacerRegime): void; }[] = [];
 
     static readonly defaults: BreathPacerConfig = {
         delay: 1000/60,
@@ -29,7 +31,7 @@ export class BreathPacer {
 
     constructor(
         canvas: HTMLCanvasElement,
-        instructions: BreathPacerInstruction[],
+        instructions: BreathPacerRegime[],
         cfg: Partial<BreathPacerConfig> = {},
     ) {
         // initialize canvas and context
@@ -52,69 +54,99 @@ export class BreathPacer {
         this.requestUpdate();
     }
 
-    setInstructions(instructions: BreathPacerInstruction[]) {
-        const points = [{t: 0, h: 0}];
-        instructions.forEach(({duration, breathe}) => {
-            const index = points.length;
-            const t = points[index - 1].t + duration;
-            const h = (() => {
-                switch (breathe) {
-                    case "in":
-                        return 1;
-                    case "out":
-                        return 0;
-                    case "hold":
-                        return points[index - 1].h;
-                    default:
-                        throw new Error(`invalid value "${breathe}" for breathe`);
-                }
-            })();
-            points.push({t, h});
-        });
-        this.points = points;
-        this.requestUpdate();
+    notify(curTime: number) {
+        if (!this.running) return;
+
+        if (this.regimeBoundaries.length > 0 && curTime >= this.regimeBoundaries[0].boundary) {
+            const nextRegime = this.regimeBoundaries.shift();
+            if (nextRegime) {
+                this.subscribers.forEach(subCallback => subCallback(nextRegime.regime));
+            } else {
+                throw new Error('Unexpected state: Starting undefined breath pacing regime');
+            }
+        }
     }
 
-    setPaceAndDuration(msPerBreath: number, totalMs: number, holdMs: number) {
-        if (msPerBreath < 0 || totalMs < 0 || holdMs < 0) {
-            throw new Error("negative values are not allowed when setting breathing pace and duration");
-        }
-        const fullCycleMs = msPerBreath + holdMs;
-        let fullBreaths = Math.floor(totalMs / fullCycleMs);
-        const remainingTime = totalMs % fullCycleMs;
-        if (remainingTime > 0) {
-            // if they specified something that ends in less than a full breath cycle, bump it up,
-            // per Mara
-            fullBreaths += 1;
-        }
-        const halfBreathTime = msPerBreath / 2;
-        const segmentsPerBreath = holdMs > 0 ? 3 : 2;
+    subscribeToRegimeChanges(callbackFn: (r: BreathPacerRegime) => void) {
+        this.subscribers.push(callbackFn);
+    }
+
+    /**
+     * Builds out the list of points (time and height) for each inhalation, exhalation, and (optionally)
+     * hold described by each regime in instructions. 
+     * 
+     * If the regime is not randomized, each inhalation, exhalation, and (optionally) hold will be 
+     * same length for a given regime. That length will be either 1/2 (if there is no hold) or 1/3
+     * (if there is a hold) of the time that a total breath should last, based on the number of breaths
+     * per minute and the total duration of the regime. 
+     * 
+     * If the regime is randomized, each inhalation, exhalation, and (optionally) hold will be a random
+     * duration within a given range. The range is +/- 1 second (if no hold) or +/- 0.66 seconds (if 
+     * there is a hold) around the length that the inhalation/exhalation/hold would be in the non-random case.
+     * 
+     * It is possible to describe a regime that results in a non-integral number of breaths. In this case
+     * the number of breaths will be increased by 1, resulting in a slightly longer regime than requested.
+     * (And, of course, a slightly different number of breaths per minute than requested.)
+     * 
+     * Randmoization can also result in a regime that is slightly longer or slightly shorter than requested,
+     * as well as a number of breaths per minute that is higher or lower than requested, though if the regime duration
+     * is long enough the average number of breaths per minute over the course of the whole duration should
+     * work out to be close the requested number.
+     * 
+     * This method also sets up the time points at which subscribers are notified of regime changes (when the pacer
+     * switches from one regime to the next). These notifications should always fall at the end of a complete
+     * breath (including the post-exhale hold, if specified). Because the regimes may be slightly longer or shorter
+     * than requested the notification will not come exactly at the end of the *requested* regime but instead
+     * when the regime *actually* ends. The notification includes the description of the *requested* regime, however.
+     * There is currently no way to receive any information about the *actual* regime.
+     * 
+     * @param instructions 
+     */
+    setInstructions(instructions: BreathPacerRegime[]) {
         const points = [{t: 0, h: 0}];
-        for (let i = 0; i < fullBreaths * segmentsPerBreath; i++) {
-            const t = (() => {
-                if (holdMs === 0 || (i - 2) % 3 !== 0) return points[i].t + halfBreathTime;
-                return points[i].t + holdMs;
-            })();
-            const h = (() => {
-                if (segmentsPerBreath === 2) {
-                    if (i % 2 === 0) {
-                        return 1;  // inhale
-                    }
-                    return 0;  // exhale
+        const boundaries: {boundary:number, regime:BreathPacerRegime}[] = [];
+        let curBoundary = 0;
+
+        instructions.forEach(r => {
+            validateRegime(r);
+            const segmentsPerBreath = r.holdPos ? 3 : 2;
+            const msPerBreath = (60 / r.breathsPerMinute) * 1000;
+            const totalBreaths = r.durationMs / msPerBreath;
+            const baseSegmentDur = msPerBreath / segmentsPerBreath;
+            let segmentDur: () => number;
+            if (r.randomize) {
+                // per spec, range should be +/- 2 seconds of total breath length in increments of 0.1 seconds
+                const msPerSegmentRange = makeRange(baseSegmentDur - (2000 / segmentsPerBreath), baseSegmentDur + (2000 / segmentsPerBreath), (100 / segmentsPerBreath));
+                segmentDur = () => {
+                    const rand = Math.floor(Math.random() * msPerSegmentRange.length);
+                    return msPerSegmentRange[rand];
                 }
-                if (i % 3 === 0) {
-                    return 1;  // inhale
+            } else {
+                segmentDur = () => baseSegmentDur;
+            }
+
+            let curRegimeActualDuration = 0;
+            for (let i = 0; i < totalBreaths; i++) {  // if totalBreaths is non-integral this will effectively add 1
+                const index = points.length;
+                let t = points[index - 1].t + segmentDur();
+                points.push({t, h:1}); // always start with inhale
+                if (r.holdPos === 'postInhale') {
+                    t = t + segmentDur();
+                    points.push({t, h:1});
                 }
-                if ((i - 1) % 3 === 0) {
-                    return 0;  // exhale
+                t = t + segmentDur();
+                points.push({t, h: 0}); // now exhale
+                if (r.holdPos === 'postExhale') {
+                    t = t + segmentDur();
+                    points.push({t, h:0});
                 }
-                if ((i - 2) % 3 === 0) {
-                    return points[i].h  // hold
-                }
-                throw new Error(`unexpected value ${i} for breath count`);
-            })();
-            points.push({t, h});
-        }
+            }
+            curRegimeActualDuration = points[points.length - 1].t - curBoundary;
+            boundaries.push({boundary: curBoundary, regime: r})
+            curBoundary += curRegimeActualDuration;
+        });
+
+        this.regimeBoundaries = boundaries;
         this.points = points;
         this.requestUpdate();
     }
@@ -136,6 +168,7 @@ export class BreathPacer {
             }
             this.lastInstant = instant;
         }
+        this.notify(this.t);
         // bindings for convenience
         const canvas = this.canvas;
         const cfg = this.cfg;
@@ -242,6 +275,30 @@ function guideHeight(points: BreathPacerPoint[], t: number): number {
     return m*t + b;
 }
 
+function validateRegime(regime: BreathPacerRegime): void {
+    if (regime.breathsPerMinute < 2) {
+        throw new Error('The minimum breaths per minute is 2.');
+    }
+    if (regime.breathsPerMinute > 60) {
+        throw new Error('The maximum breaths per minute is 60.');
+    }
+    if (regime.durationMs < 10000) {
+        throw new Error('The minimum duration is 10000 (10 seconds).');
+    }
+    const msPerBreath = ( 60 / regime.breathsPerMinute) * 1000;
+    if (regime.durationMs < msPerBreath) {
+        throw new Error('The minmimum number of breaths during the total duration is 1.')
+    }
+}
+
+function makeRange(start:number, end:number, stepSize:number) {
+    const res:number[] = [];
+    for (let i:number = start; i <= end; i += stepSize) {
+        res.push(i);
+    }
+    return res;
+}
+
 
 interface BreathPacerPoint {
     t: number;
@@ -249,9 +306,15 @@ interface BreathPacerPoint {
 }
 
 
-export interface BreathPacerInstruction {
-    duration: number;
-    breathe: "in" | "out" | "hold";
+/**
+ * A "regime" is a period of time when a participant should breathe at a give pace,
+ * with certains options, such as whether they should pause after inhaling/exhaling.
+ */
+export interface BreathPacerRegime {
+    durationMs: number;
+    breathsPerMinute: number; // if hold is false, inhale and exhale are equal amounts of time. If hold is true, inhale, hold and exhale are all equal amounts of time
+    holdPos?: "postInhale" | "postExhale";
+    randomize: boolean; // if true, duration of inhale, exhale and hold (if set) are randoomly selected from a distribution that should cause the average breaths per minute to be as specified. If false, inhale/exhale/hold (if set) duration are fixed.
 }
 
 
