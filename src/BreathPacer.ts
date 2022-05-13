@@ -9,7 +9,7 @@ export class BreathPacer {
     private lastInstant: number | null = null;
     private resolve: (() => void) | null = null;
     private regimeBoundaries: {boundary:number, regime:BreathPacerRegime}[] = [];
-    private subscribers: { (regime: BreathPacerRegime): void; }[] = [];
+    private subscribers: { (changeTime: number, regime: BreathPacerRegime): void; }[] = [];
 
     static readonly defaults: BreathPacerConfig = {
         delay: 1000/60,
@@ -60,14 +60,27 @@ export class BreathPacer {
         if (this.regimeBoundaries.length > 0 && curTime >= this.regimeBoundaries[0].boundary) {
             const nextRegime = this.regimeBoundaries.shift();
             if (nextRegime) {
-                this.subscribers.forEach(subCallback => subCallback(nextRegime.regime));
+                this.subscribers.forEach(subCallback => subCallback(curTime, nextRegime.regime));
             } else {
                 throw new Error('Unexpected state: Starting undefined breath pacing regime');
             }
         }
     }
 
-    subscribeToRegimeChanges(callbackFn: (r: BreathPacerRegime) => void) {
+    /**
+     * Use this function to be notified when the pacer switches from one regime to another.
+     * The callback you provide will be called with two params:
+     * (1) The number of ms since the pacer started.
+     * (2) The BreathPacerRegime that is currently starting.
+     * This means that the first call will happen almost synchronously with bp.start() being called
+     * and that the number of ms for the first regime will be 0.
+     * Note that the second (and subsequent) calls will not necessarily happen at exactly the
+     * number of ms one would expect based on the durations of the preceding regimes, as regimes
+     * may either be random or need adjustment to allow for a complete number of breaths, either
+     * of which can cause them to be longer than specified.
+     * @param callbackFn A function that accepts change time (number of ms) and BreathPacerRegime paramaeters.
+     */
+    subscribeToRegimeChanges(callbackFn: (changeTime: number, r: BreathPacerRegime) => void) {
         this.subscribers.push(callbackFn);
     }
 

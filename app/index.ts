@@ -13,8 +13,8 @@ const bp = new BreathPacer(
     DEFAULT_INSTRUCTIONS,
 );
 
-function logRegimeChange(bpr: BreathPacerRegime) {
-    console.debug(`Starting regime`);
+function logRegimeChange(changeTime:number, bpr: BreathPacerRegime) {
+    console.debug(`Starting regime ${changeTime} ms after pacer start`);
     console.debug(bpr);
 }
 

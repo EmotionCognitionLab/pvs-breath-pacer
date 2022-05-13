@@ -1,4 +1,9 @@
-import { BreathPacerUtilities } from '../src/BreathPacer';
+/**
+ * @jest-environment jsdom
+ */
+
+
+import { BreathPacer, BreathPacerUtilities } from '../src/BreathPacer';
 
 describe("Regime validation", () => {
     test("should not allow regimes with negative durations", () => {
@@ -308,5 +313,43 @@ describe.each([
 });
 
 describe("Should notify on regime change", () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        
+        jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => setTimeout(() => cb(performance.now()), 100));
+    });
+    
+    afterEach(() => {
+        window.requestAnimationFrame.mockRestore();
+        jest.clearAllTimers();
+    });
 
+    test("when running after calling start()", () => {
+        const regimes = [ 
+            {durationMs: 15000, breathsPerMinute: 10, holdPos: "postInhale", randomize: true},
+            {durationMs: 20000, breathsPerMinute: 12, randomize: true},
+            {durationMs: 30000, breathsPerMinute: 15, holdPos: "postExhale", randomize: true},
+            {durationMs: 20000, breathsPerMinute: 10, randomize: true}
+        ];
+        const canvas = document.createElement('canvas');
+        const bp = new BreathPacer(canvas, regimes);
+        const notifications = [];
+        const logNotification = (time, regime) => notifications.push({timePoint: time, regime: regime});
+        bp.subscribeToRegimeChanges(logNotification);
+        bp.start();
+        const totalTime = regimes.reduce((prev, cur) => prev + cur.durationMs, 0);
+        jest.advanceTimersByTime(totalTime);
+        expect(notifications.length).toBe(regimes.length);
+        notifications.forEach((n, idx) => {
+            expect(n.regime).toEqual(regimes[idx]);
+        });
+        const runningDurationSum = regimes.reduce((prev, cur, idx) => {
+            const prevDuration = prev[idx - 1] || 0;
+            prev.push(cur.durationMs + prevDuration);
+            return prev;
+        }, []);
+        runningDurationSum.splice(0,0,0);
+        runningDurationSum.pop();
+        notifications.forEach((n, idx) => expect(n.timePoint).toBeGreaterThanOrEqual(runningDurationSum[idx]));
+    });
 });
