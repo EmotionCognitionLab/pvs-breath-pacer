@@ -217,8 +217,8 @@ export class BreathPacerUtilities {
     }
     
     static validateRegime(regime: BreathPacerRegime): void {
-        if (regime.breathsPerMinute < 2) {
-            throw new Error('The minimum breaths per minute is 2.');
+        if (regime.breathsPerMinute < 1) {
+            throw new Error('The minimum breaths per minute is 1.');
         }
         if (regime.breathsPerMinute > 60) {
             throw new Error('The maximum breaths per minute is 60.');
