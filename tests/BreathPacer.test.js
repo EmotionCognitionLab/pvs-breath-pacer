@@ -16,9 +16,9 @@ describe("Regime validation", () => {
         ).toThrow("The minimum duration is 10000 (10 seconds).");
     });
 
-    test("should not allow less than 2 breaths/minute", () => {
-        expect(() => BreathPacerUtilities["validateRegime"]({durationMs: 15000, breathsPerMinute: 1, randomize: false})
-        ).toThrow("The minimum breaths per minute is 2.");
+    test("should not allow less than 1 breaths/minute", () => {
+        expect(() => BreathPacerUtilities["validateRegime"]({durationMs: 15000, breathsPerMinute: 0, randomize: false})
+        ).toThrow("The minimum breaths per minute is 1.");
     });
 
     test("should not allow more than 60 breaths/minute", () => {
