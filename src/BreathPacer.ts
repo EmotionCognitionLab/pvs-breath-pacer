@@ -4,9 +4,14 @@ export class BreathPacer {
     private points!: BreathPacerPoint[];
     private cfg: BreathPacerConfig;
 
+    private audioInhale?: HTMLAudioElement;
+    private audioExhale?: HTMLAudioElement;
     private running: boolean = false;
     private t: number = 0;
     private lastInstant: number | null = null;
+    private lastH: number = 0;
+    private lastT: number = 0;
+    private lastSlope: number = 0;
     private resolve: (() => void) | null = null;
     private regimeBoundaries: {boundary:number, regime:BreathPacerRegime}[] = [];
     private subscribers: { (changeTime: number, regime: BreathPacerRegime): void; }[] = [];
@@ -51,6 +56,12 @@ export class BreathPacer {
             ...BreathPacer.defaults,
             ...cfg,
         };
+        if (this.cfg.audioInhaleUrl) {
+            this.audioInhale = new Audio(this.cfg.audioInhaleUrl)
+        }
+        if (this.cfg.audioExhaleUrl) {
+            this.audioExhale = new Audio(this.cfg.audioExhaleUrl)
+        }
         this.requestUpdate();
     }
 
@@ -104,6 +115,7 @@ export class BreathPacer {
         if (this.running) {
             // t doesn't change on the first update
             if (this.lastInstant !== null) {
+                this.lastT = this.t;
                 this.t += instant - this.lastInstant;
             }
             this.lastInstant = instant;
@@ -119,6 +131,20 @@ export class BreathPacer {
             t: this.t,
             h: BreathPacerUtilities.guideHeight(points, this.t),
         };
+        // compute slope and see if direction has changed
+        const rise = guide.h - this.lastH;
+        const run = this.t - this.lastT;
+        if (run > 0) {
+            const slope = rise / run;
+            if (this.lastSlope <= 0 && slope > 0) {
+                this.audioInhale?.play();
+            } else if (this.lastSlope >= 0 && slope < 0) {
+                this.audioExhale?.play();
+            }
+            this.lastSlope = slope;
+            this.lastH = guide.h;
+        }
+        
         // define view transformation on world {t, h} coords to canvas [x, y] coords
         const view = ({t, h}: BreathPacerPoint): [number, number] => {
             return [
@@ -341,6 +367,8 @@ export interface BreathPacerRegime {
 
 
 export interface BreathPacerConfig {
+    audioInhaleUrl?: string,
+    audioExhaleUrl?: string,
     delay: number,
     guideFillStyle: string,
     guideRadius: number,
