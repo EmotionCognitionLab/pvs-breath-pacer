@@ -58,9 +58,15 @@ export class BreathPacer {
         };
         if (this.cfg.audioInhaleUrl) {
             this.audioInhale = new Audio(this.cfg.audioInhaleUrl)
+            if (this.cfg.audioVolume) {
+                this.audioInhale.volume = this.cfg.audioVolume;
+            }
         }
         if (this.cfg.audioExhaleUrl) {
             this.audioExhale = new Audio(this.cfg.audioExhaleUrl)
+            if (this.cfg.audioVolume) {
+                this.audioExhale.volume = this.cfg.audioVolume;
+            }
         }
         this.requestUpdate();
     }
@@ -369,6 +375,7 @@ export interface BreathPacerRegime {
 export interface BreathPacerConfig {
     audioInhaleUrl?: string,
     audioExhaleUrl?: string,
+    audioVolume?: number,
     delay: number,
     guideFillStyle: string,
     guideRadius: number,
